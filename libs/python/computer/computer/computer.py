@@ -89,6 +89,7 @@ class Computer:
         provider_type: Union[str, VMProviderType] = VMProviderType.LUME,
         provider_port: Optional[int] = 7777,
         noVNC_port: Optional[int] = 8006,
+        vnc_port: Optional[int] = None,
         api_port: Optional[int] = None,
         host: str = os.environ.get("PYLUME_HOST", "localhost"),
         api_host: Optional[str] = None,
@@ -117,11 +118,12 @@ class Computer:
             verbosity: Logging level (standard Python logging levels: logging.DEBUG, logging.INFO, etc.)
                       LogLevel enum values are still accepted for backward compatibility
             telemetry_enabled: Whether to enable telemetry tracking. Defaults to True.
-            provider_type: The VM provider type to use (lume, qemu, cloud)
+            provider_type: The VM provider type to use (lume, qemu, cloud, docker, kubernetes)
             provider_port: Optional port to use for the VM provider server
             noVNC_port: Optional port for the noVNC web interface (Lumier provider)
+            vnc_port: Optional port for the VNC interface (alias for noVNC_port, used by Docker/Kubernetes providers)
             api_port: Optional port for the computer API server
-            host: Host to use for VM provider connections (e.g. "localhost", "host.docker.internal")
+            host: Host to use for VM provider connections (e.g. "localhost", "host.docker.internal", pod IP for Kubernetes)
             api_host: Optional host IP address to use when use_host_computer_server is True (defaults to "localhost")
             storage: Optional path for persistent VM storage (Lumier provider)
             ephemeral: Whether to use ephemeral storage
@@ -144,6 +146,10 @@ class Computer:
             elif os_type == "linux":
                 image = "trycua/cua-ubuntu:latest"
         image = str(image)
+
+        # Handle vnc_port as an alias for noVNC_port
+        if vnc_port is not None:
+            noVNC_port = vnc_port
 
         # Store original parameters
         self.image = image
@@ -394,6 +400,19 @@ class Computer:
                                     noVNC_port=noVNC_port,
                                 )
                             elif self.provider_type == VMProviderType.DOCKER:
+                                self.config.vm_provider = VMProviderFactory.create_provider(
+                                    self.provider_type,
+                                    port=port,
+                                    host=host,
+                                    storage=storage,
+                                    shared_path=shared_path,
+                                    image=image or "trycua/cua-ubuntu:latest",
+                                    verbose=verbose,
+                                    ephemeral=ephemeral,
+                                    noVNC_port=noVNC_port,
+                                    api_port=self.api_port,
+                                )
+                            elif self.provider_type == VMProviderType.KUBERNETES:
                                 self.config.vm_provider = VMProviderFactory.create_provider(
                                     self.provider_type,
                                     port=port,

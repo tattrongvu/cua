@@ -16,6 +16,7 @@ class VMProviderType(StrEnum):
     WINSANDBOX = "winsandbox"
     DOCKER = "docker"
     UNKNOWN = "unknown"
+    KUBERNETES = "kubernetes"
 
 
 class BaseVMProvider(AsyncContextManager):

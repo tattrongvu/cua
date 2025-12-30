@@ -164,5 +164,31 @@ class VMProviderFactory:
                     "Docker is required for DockerProvider. "
                     "Please install Docker and ensure it is running."
                 ) from e
+        elif provider_type == VMProviderType.KUBERNETES:
+            try:
+                from .kubernetes import HAS_KUBERNETES, KubernetesProvider
+
+                if not HAS_KUBERNETES:
+                    raise ImportError(
+                        "Kubernetes client is required for KubernetesProvider. "
+                        "Please ensure Kubernetes is configured."
+                    )
+                return KubernetesProvider(
+                    host=host,
+                    storage=storage,
+                    shared_path=shared_path,
+                    image=image or "trycua/cua-ubuntu:latest",
+                    verbose=verbose,
+                    ephemeral=ephemeral,
+                    vnc_port=noVNC_port,
+                    api_port=api_port,
+                )
+            except ImportError as e:
+                logger.error(f"Failed to import KubernetesProvider: {e}")
+                raise ImportError(
+                    "Kubernetes client is required for KubernetesProvider. "
+                    "Please ensure Kubernetes is configured."
+                ) from e
         else:
             raise ValueError(f"Unsupported provider type: {provider_type}")
+
